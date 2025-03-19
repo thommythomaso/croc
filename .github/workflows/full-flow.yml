@@ -20,51 +20,58 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     timeout-minutes: 180
+    permissions:
+      pages: write
+      id-token: write
     steps:
       - name: Checkout repository (with submodules)
         uses: actions/checkout@v4
         with:
           submodules: true
 
-      - name: Run Yosys, OpenROAD and KLayout
-        uses: ./.github/actions/oseda-cmd
-        with:
-          cmd: "make yosys && make openroad && make klayout"
-      - name: Upload openroad output
-        uses: actions/upload-artifact@v4
-        with:
-          name: croc-openroad
-          path: openroad/out
-        continue-on-error: true
-      - name: Upload openroad reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: croc-openroad
-          path: openroad/reports
-        continue-on-error: true
-      - name: Upload gds
-        uses: actions/upload-artifact@v4
-        with:
-          name: croc-gds
-          path: klayout/croc_chip.gds
-        continue-on-error: true
+#      - name: Run Yosys, OpenROAD and KLayout
+#        uses: ./.github/actions/oseda-cmd
+#        with:
+#          cmd: "make yosys && make openroad && make klayout"
+#      - name: Upload openroad output
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: croc-openroad
+#          path: openroad/out
+#        continue-on-error: true
+#      - name: Upload openroad reports
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: croc-openroad
+#          path: openroad/reports
+#        continue-on-error: true
+#      - name: Upload gds
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: croc-gds
+#          path: klayout/croc_chip.gds
+#        continue-on-error: true
 
 # Render below (have all in one task to keep the oseda container cached)
       - name: Checkout ArtistIC repository
         uses: actions/checkout@v4
         with:
           repository: pulp-platform/artistic
+          ref: 7e142409d7ba6a51cabd5658fcceb85d49213153
           path: artistic
       - name: Update package lists and install Inkscape, img2pdf
+# REMOVE COPY
         run: |
           sudo apt-get update
           sudo apt-get install -y inkscape img2pdf
+          cp artistic/examples/mlem/mlem_vanilla.gds.gz klayout/croc_chip.gds
       - name: Customize input logo
+# CHANGE RESOLUTION BACK TO 660
         run : |
           sed "s/#DATE#/$(date '+%Y-%m-%d')/g" doc/artwork/logo_chip.svg > doc/artwork/logo.svg
           sed -i "s/#HASH#/$(git rev-parse --short HEAD)/g" doc/artwork/logo.svg
           sed -i "s|#REPO#|gh.io/$GITHUB_REPOSITORY|g" doc/artwork/logo.svg
-          inkscape doc/artwork/logo.svg -w 660 -h 660 -o doc/artwork/logo.png
+          inkscape doc/artwork/logo.svg -w 788 -h 788 -o doc/artwork/logo.png
       - name: Upload logo
         uses: actions/upload-artifact@v4
         with:
@@ -127,7 +134,9 @@ jobs:
         run: |
           mkdir -p artistic/renderics
           cp -v .github/config/croc_ci.json artistic/renderics/croc_ci.json
+          cp -v .github/config/croc_map_ci.json artistic/renderics/croc_map_ci.json
           sed "s|/fosic/designs|/home/runner/work/croc|g" artistic/renderics/croc_ci.json > artistic/renderics/croc_ci_runner.json
+          sed "s|/fosic/designs|/home/runner/work/croc|g" artistic/renderics/croc_map_ci.json > artistic/renderics/croc_map_ci_runner.json
       - name: Analyze render
         uses: ./.github/actions/oseda-cmd
         with:
@@ -148,7 +157,7 @@ jobs:
         uses: ./.github/actions/oseda-cmd
         with:
           cmd: "cd artistic; make gen_raw CFG_FILE=/fosic/designs/croc/artistic/renderics/croc_ci.json"
-      - name: Render
+      - name: Render PDFs
         run: |
           cd artistic; make gen_pdfs CFG_FILE=renderics/croc_ci_runner.json
       - name: Finish render
@@ -174,3 +183,28 @@ jobs:
           name: render-jpg
           path: artistic/renderics/croc_render.jpg
         continue-on-error: true
+# Map render below:
+      - name: Render b/w map layer tiles
+        uses: ./.github/actions/oseda-cmd
+        with:
+          cmd: "cd artistic; make gen_raw CFG_FILE=/fosic/designs/croc/artistic/renderics/croc_map_ci.json"
+      - name: Render Map Tiles
+        run: |
+          cd artistic; make gen_tiles CFG_FILE=renderics/croc_map_ci_runner.json
+      - name: Mapify Tiles
+        run: |
+          cd artistic; python3 scripts/mapify.py renderics/croc_map_ci_runner.json | sh
+      - name: Upload OpenStreetMap DB
+        uses: actions/upload-artifact@v4
+        with:
+          name: map-db
+          path: artistic/mapify
+        continue-on-error: true
+      - name: Upload OpenStreetMap DB to pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: artistic/mapify
+      - name: Deploy pages (on main only)
+        if: github.ref == 'refs/heads/main'
+        id: deployment
+        uses: actions/deploy-pages@v3
