@@ -82,13 +82,14 @@ jobs:
           path: doc/artwork/logo.png
         continue-on-error: true
 
-      - name: Install ImageMagick
+      - name: Install ImageMagick, Potrace, Pillow, svgpathtools
         run: |
-          sudo apt-get install -y imagemagick
+          sudo apt-get install -y imagemagick potrace
+          pip install --break-system-packages svgpathtools Pillow
       - name: Install packages in OSEDA
         uses: ./.github/actions/oseda-cmd
         with:
-          cmd: "pip install --break-system-packages gdspy svgpathtools Pillow"
+          cmd: "pip install --break-system-packages gdspy"
       - name: Meercat setup, export top-level GDS
         uses: ./.github/actions/oseda-cmd
         with:
@@ -171,11 +172,11 @@ jobs:
           mv artistic/renderics//PDF__croc_0-0.pdf artistic/renderics/croc_render.pdf
           convert artistic/renderics/croc_render.png artistic/renderics/croc_render.jpg
       - name: Create annotated outlines SVG
-        uses: ./.github/actions/oseda-cmd
-        with:
-          cmd: python3 artistic/scripts/gen_outline.py -i openroad/out/croc.def -o artistic/renderics/croc_modules.svg -b artistic/renderics/croc_render.jpg --lef_files ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_sram/lef/*.lef --px_scale 17000 --module_json .github/config/croc_modules.json --opacity 0.65 --font_size 35 --luminosity 0.85
-      - name: Create annotated outlines PDF
         run: |
+          python3 artistic/scripts/gen_outline.py -i openroad/out/croc.def -o artistic/renderics/croc_modules.svg -b artistic/renderics/croc_render.jpg --lef_files ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_sram/lef/*.lef --px_scale 17000 --module_json .github/config/croc_modules.json --opacity 0.65 --font_size 35 --luminosity 0.85
+      - name: Create annotated outlines PNG and PDF
+        run: |
+          inkscape artistic/renderics/croc_modules.svg -o artistic/renderics/croc_modules.png
           inkscape artistic/renderics/croc_modules.svg -o artistic/renderics/croc_modules.pdf
       - name: Upload render PNG
         uses: actions/upload-artifact@v4
@@ -200,6 +201,12 @@ jobs:
         with:
           name: render-module-svg
           path: artistic/renderics/croc_modules.svg
+        continue-on-error: true
+      - name: Upload render module PNG
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-module-png
+          path: artistic/renderics/croc_modules.png
         continue-on-error: true
       - name: Upload render module PDF
         uses: actions/upload-artifact@v4
@@ -230,6 +237,10 @@ jobs:
       - name: Copy GDS to be deployed
         run: |
           cp artistic/meerkat_work/croc_logo.gds artistic/mapify/croc_logo.gds
+      - name: Copy Outlines to be deployed
+        run: |
+          cp artistic/renderics/croc_modules.* artistic/mapify/
+          cp artistic/renderics/croc_render.jpg artistic/mapify/
       - name: Upload OpenStreetMap DB to pages
         uses: actions/upload-pages-artifact@v3
         with:
