@@ -88,7 +88,7 @@ jobs:
       - name: Install packages in OSEDA
         uses: ./.github/actions/oseda-cmd
         with:
-          cmd: "pip install --break-system-packages gdspy svgpathtools"
+          cmd: "pip install --break-system-packages gdspy svgpathtools Pillow"
       - name: Meercat setup, export top-level GDS
         uses: ./.github/actions/oseda-cmd
         with:
@@ -170,9 +170,12 @@ jobs:
           mv artistic/renderics//DPI__croc_0-0.png artistic/renderics/croc_render.png
           mv artistic/renderics//PDF__croc_0-0.pdf artistic/renderics/croc_render.pdf
           convert artistic/renderics/croc_render.png artistic/renderics/croc_render.jpg
-      - name: Add annotated outlines
+      - name: Create annotated outlines SVG
+        uses: ./.github/actions/oseda-cmd
+        with:
+          cmd: python3 artistic/scripts/gen_outline.py -i openroad/out/croc.def -o artistic/renderics/croc_modules.svg -b artistic/renderics/croc_render.jpg --lef_files ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_sram/lef/*.lef --px_scale 17000 --module_json .github/config/croc_modules.json --opacity 0.65 --font_size 35 --luminosity 0.85
+      - name: Create annotated outlines PDF
         run: |
-          python3 artistic/scripts/gen_outline.py -i openroad/out/croc.def -o artistic/renderics/croc_modules.svg -b artistic/renderics/croc_render.jpg --lef_files ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_sram/lef/*.lef --px_scale 17000 --module_json .github/config/croc_modules.json --opacity 0.65 --font_size 35 --luminosity 0.85
           inkscape artistic/renderics/croc_modules.svg -o artistic/renderics/croc_modules.pdf
       - name: Upload render PNG
         uses: actions/upload-artifact@v4
