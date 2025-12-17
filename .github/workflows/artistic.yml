@@ -173,7 +173,7 @@ jobs:
           convert artistic/renderics/croc_render.png artistic/renderics/croc_render.jpg
       - name: Create annotated outlines SVG
         run: |
-          python3 artistic/scripts/gen_outline.py -i openroad/out/croc.def -o artistic/renderics/croc_modules.svg -b artistic/renderics/croc_render.jpg --lef_files ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_sram/lef/*.lef --px_scale 17000 --module_json .github/config/croc_modules.json --opacity 0.65 --font_size 35 --luminosity 0.85
+          python3 artistic/scripts/gen_outline.py -i openroad/out/croc.def -o artistic/renderics/croc_modules.svg -b artistic/renderics/croc_render.jpg --lef_files ihp13/pdk/ihp-sg13g2/libs.ref/sg13g2_sram/lef/*.lef --px_scale 15000 --module_json .github/config/croc_modules.json --opacity 0.65 --font_size 35 --luminosity 0.85
       - name: Create annotated outlines PNG and PDF
         run: |
           inkscape artistic/renderics/croc_modules.svg -o artistic/renderics/croc_modules.png
