@@ -63,7 +63,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: pulp-platform/artistic
-          ref: 96c486e7195d27d9da2978f2a0e02efddead3946
+          ref: 7aff1c5fc976fbe68075a1d03592d883eed23d5e
           path: artistic
       - name: Update package lists and install Inkscape, img2pdf
         run: |
